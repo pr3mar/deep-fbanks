@@ -5,4 +5,4 @@ addpath vlfeat/toolbox/misc
 addpath matconvnet/examples/
 addpath matlab-helpers
 addpath vlfeat/toolbox/mex
-addpath vlfeat/toolbox/mex/mexa64
+addpath vlfeat/toolbox/mex/mexw64

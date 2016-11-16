@@ -29,7 +29,7 @@ opts.vocDir = 'data/VOC2007';
 opts.vocDir12 = 'data/VOC2012';
 opts.writeResults = false;
 opts.compid = 'comp2';
-opts.publishDir = '~/Dropbox/Collaborations/Mircea Cimpoi/cvpr15/figures' ;
+opts.publishDir = 'D:\dev\r\deep-fbanks\data\pubDir' ;
 opts.suffix = 'baseline' ;
 opts.prefix = 'v22' ;
 opts.model = 'imagenet-vgg-m.mat';
@@ -38,7 +38,7 @@ opts.segProposalType = 'crisp' ;
 opts.gpuId = 1;
 opts.crf = [];
 [opts, varargin] = vl_argparse(opts,varargin) ;
-
+g
 opts.expDir = sprintf('data/%s/%s-seed-%02d', opts.prefix, opts.dataset, opts.seed) ;
 opts.imdbDir = fullfile(opts.expDir, 'imdb') ;
 if ~iscell(opts.suffix)

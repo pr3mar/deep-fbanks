@@ -26,7 +26,7 @@ resetCache() ;
   function flushCache()
     if cache.numCached == 0, return ; end
     images = cat(4, cache.images{:}) ;
-    images = bsxfun(@minus, images, net.normalization.averageImage) ;
+    images = bsxfun(@minus, images, net.meta.normalization.averageImage) ;
     if net.useGpu
       images = gpuArray(images) ;
     end
@@ -58,7 +58,7 @@ for k=1:numel(im)
   for r = 1:numel(regions{k}.labels)
     mask = ismember(regions{k}.basis, regions{k}.labels{r}) ;
     appendCache(k, r, ...
-      getRegion(opts, single(im{k}), mask, net.normalization.imageSize(1))) ;
+      getRegion(opts, single(im{k}), mask, net.meta.normalization.imageSize(1))) ;
     if 0
       figure(1) ; clf ;
       subplot(2,2,1) ; imagesc(im{k}) ;
