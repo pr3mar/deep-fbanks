@@ -1,4 +1,4 @@
-function [opts, imdb] = os_setup(varargin)
+function [opts, imdb, timdb] = os_setup(varargin)
 
 global is_iasonas
 if (exist('is_iasonas', 'var') ||isempty(is_iasonas) || ~is_iasonas)
@@ -13,7 +13,7 @@ opts.regionBorder = 0.05 ;
 opts.numDCNNWords = 64 ;
 opts.numDSIFTWords = 256 ;
 opts.numSamplesPerWord = 1000 ;
-opts.printDatasetInfo = false ;
+opts.printDatasetInfo = true ;
 opts.excludeDifficult = true ;
 opts.encoders = {struct('type', 'rcnn', 'opts', {})} ;
 opts.dataset = 'os' ;
@@ -26,6 +26,7 @@ opts.mitDir = 'data/mit_indoor';
 opts.msrcDir = 'data/msrc_c';
 opts.cubDir = 'data/cub';
 opts.vocDir = 'data/VOC2007';
+opts.sampleVocDir = 'data/voc07_sample';
 opts.vocDir12 = 'data/VOC2012';
 opts.writeResults = false;
 opts.compid = 'comp2';
@@ -37,12 +38,16 @@ opts.layer = 13 ; % for D-CNN (R-CNN is the penultimate)
 opts.segProposalType = 'crisp' ;
 opts.gpuId = 1;
 opts.crf = [];
+opts.transferDataset = 'NA';
 [opts, varargin] = vl_argparse(opts,varargin) ;
-g
+
 opts.expDir = sprintf('data/%s/%s-seed-%02d', opts.prefix, opts.dataset, opts.seed) ;
+opts.tDir = sprintf('data/%s/%s-seed-%02d', opts.prefix, opts.transferDataset, opts.seed) ;
 opts.imdbDir = fullfile(opts.expDir, 'imdb') ;
+opts.timdbDir = fullfile(opts.tDir, 'timdb') ;
 if ~iscell(opts.suffix)
   opts.resultPath = fullfile(opts.expDir, sprintf('result-%s.mat', opts.suffix)) ;
+  opts.resultPath_t = fullfile(opts.tDir, sprintf('result-%s.mat', opts.suffix)) ;
   opts.segResultPath = fullfile(opts.expDir, sprintf('%s/result-%s-seg.mat', opts.segProposalType, opts.suffix)) ;
   opts.segPublishDir = fullfile(opts.expDir, sprintf('%s/result-%s-seg-figures', opts.segProposalType, opts.suffix)) ;
   vl_xmkdir(opts.segPublishDir);
@@ -52,6 +57,7 @@ if ~iscell(opts.suffix)
 else
   for s = 1:numel(opts.suffix)
     opts.resultPath{s} = fullfile(opts.expDir, sprintf('result-%s.mat', opts.suffix{s})) ;
+    opts.resultPath_t{s} = fullfile(opts.tDir, sprintf('result-%s.mat', opts.suffix{s})) ;
     opts.segResultPath{s} = fullfile(opts.expDir, sprintf('%s/result-%s-seg.mat', opts.segProposalType, opts.suffix{s})) ;
     opts.segPublishDir{s} = fullfile(opts.expDir, sprintf('%s/result-%s-seg-figures', opts.segProposalType, opts.suffix{s})) ;
     vl_xmkdir(opts.segPublishDir{s});
@@ -87,6 +93,24 @@ for i = 1:numel(opts.encoders)
   end
 end
 
+
+models_t = {} ;
+for i = 1:numel(opts.encoders)
+  if isstruct(opts.encoders{i})
+    name = opts.encoders{i}.name ;
+    opts.encoders_t{i}.path = fullfile(opts.tDir, [name '-encoder.mat']) ;
+    opts.encoders_t{i}.codePath = fullfile(opts.tDir, [name '-codes.mat']) ;
+    models_t = horzcat(models_t, get_cnn_model_from_encoder_opts(opts.encoders{i})) ;
+  else
+    for j = 1:numel(opts.encoders{i})
+      name = opts.encoders{i}{j}.name ;
+      opts.encoders_t{i}{j}.path = fullfile(opts.tDir, [name '-encoder.mat']) ;
+      opts.encoders_t{i}{j}.codePath = fullfile(opts.tDir, [name '-codes.mat']) ;
+      models_t = horzcat(models_t, get_cnn_model_from_encoder_opts(opts.encoders{i}{j})) ;
+    end
+  end
+end
+
 % -------------------------------------------------------------------------
 %                                                       Download CNN models
 % -------------------------------------------------------------------------
@@ -110,44 +134,99 @@ vl_xmkdir(opts.imdbDir) ;
 imdbPath = fullfile(opts.imdbDir, sprintf('imdb-seed-%d.mat', opts.seed)) ;
 if exist(imdbPath)
   imdb = load(imdbPath) ;
+else
+    switch opts.dataset
+      case 'os'
+        imdb = os_get_database(opts.osDir) ;
+      case 'os-a'
+        imdb = os_attr_get_database(opts.osDir);
+      case 'fmd'
+        imdb = fmd_get_database(opts.fmdDir, 'seed', opts.seed) ;
+      case 'dtd'
+        imdb = dtd_get_database(opts.dtdDir, 'seed', opts.seed);
+      case 'kth'
+        imdb = kth_get_database(opts.kthDir, 'seed', opts.seed);
+      case 'voc07'
+        imdb = voc_get_database(opts.vocDir, 'seed', opts.seed);
+      case 'samplevoc07'
+        imdb = sample_voc_get_database(opts.sampleVocDir, 'seed', opts.seed);
+      case 'voc12'
+        imdb = voc_get_database(opts.vocDir12, 'seed', opts.seed);
+      case 'voc12s'
+        imdb = voc_get_seg_database(opts.vocDir12, 'seed', opts.seed);
+      case 'mit'
+        imdb = mit_indoor_get_database(opts.mitDir);
+      case 'msrc'
+        imdb = msrc_c_get_database(opts.msrcDir);
+      case 'cubcrop'
+        imdb = cub_get_database(opts.cubDir, true);
+      case 'cub'
+        imdb = cub_get_database(opts.cubDir, false);
+      case 'alot'
+        imdb = alot_get_database(opts.alotDir, 'seed', opts.seed);
+      otherwise
+        serror('Unknown dataset %s', opts.dataset) ;
+    end
+
+    save(imdbPath, '-struct', 'imdb') ;
+    if opts.printDatasetInfo
+      print_dataset_info(imdb) ;
+    end
+end
+% -------------------------------------------------------------------------
+%                                                     Load transfer dataset
+% -------------------------------------------------------------------------
+if strcmp(opts.transferDataset, 'NA')
+    clear timdb
+    return
+end
+
+vl_xmkdir(opts.tDir) ;
+vl_xmkdir(opts.timdbDir) ;
+
+timdbPath = fullfile(opts.timdbDir, sprintf('timdb-seed-%d.mat', opts.seed)) ;
+if exist(timdbPath)
+  timdb = load(timdbPath) ;
   return ;
 end
 
-switch opts.dataset
+switch opts.transferDataset
   case 'os'
-    imdb = os_get_database(opts.osDir) ;
+    timdb = os_get_database(opts.osDir) ;
   case 'os-a'
-    imdb = os_attr_get_database(opts.osDir);
+    timdb = os_attr_get_database(opts.osDir);
   case 'fmd'
-    imdb = fmd_get_database(opts.fmdDir, 'seed', opts.seed) ;
+    timdb = fmd_get_database(opts.fmdDir, 'seed', opts.seed) ;
   case 'dtd'
-    imdb = dtd_get_database(opts.dtdDir, 'seed', opts.seed);
+    timdb = dtd_get_database(opts.dtdDir, 'seed', opts.seed);
   case 'kth'
-    imdb = kth_get_database(opts.kthDir, 'seed', opts.seed);
+    timdb = kth_get_database(opts.kthDir, 'seed', opts.seed);
   case 'voc07'
-    imdb = voc_get_database(opts.vocDir, 'seed', opts.seed);
+    timdb = voc_get_database(opts.vocDir, 'seed', opts.seed);
+  case 'samplevoc07'
+    timdb = sample_voc_get_database(opts.sampleVocDir, 'seed', opts.seed);
   case 'voc12'
-    imdb = voc_get_database(opts.vocDir12, 'seed', opts.seed);
+    timdb = voc_get_database(opts.vocDir12, 'seed', opts.seed);
   case 'voc12s'
-    imdb = voc_get_seg_database(opts.vocDir12, 'seed', opts.seed);
+    timdb = voc_get_seg_database(opts.vocDir12, 'seed', opts.seed);
   case 'mit'
-    imdb = mit_indoor_get_database(opts.mitDir);
+    timdb = mit_indoor_get_database(opts.mitDir);
   case 'msrc'
-    imdb = msrc_c_get_database(opts.msrcDir);
+    timdb = msrc_c_get_database(opts.msrcDir);
   case 'cubcrop'
-    imdb = cub_get_database(opts.cubDir, true);
+    timdb = cub_get_database(opts.cubDir, true);
   case 'cub'
-    imdb = cub_get_database(opts.cubDir, false);
+    timdb = cub_get_database(opts.cubDir, false);
   case 'alot'
-    imdb = alot_get_database(opts.alotDir, 'seed', opts.seed);
+    timdb = alot_get_database(opts.alotDir, 'seed', opts.seed);
   otherwise
-    serror('Unknown dataset %s', opts.dataset) ;
+    serror('Unknown dataset %s', opts.transferDataset) ;
 end
 
-save(imdbPath, '-struct', 'imdb') ;
+save(timdbPath, '-struct', 'timdb') ;
 
 if opts.printDatasetInfo
-  print_dataset_info(imdb) ;
+  print_dataset_info(timdb) ;
 end
 
 % -------------------------------------------------------------------------

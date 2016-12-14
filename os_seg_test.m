@@ -3,11 +3,12 @@ function os_seg_test(varargin)
 % same time
 
 % load stuff
-[opts, imdb] = os_setup(varargin{:}) ;
-classes = find(imdb.meta.inUse) ;
-
+[opts, imdb, timdb] = os_setup(varargin{:}) ;
+classes = find(timdb.meta.inUse) ;
+samplevocClasses  = find(imdb.meta.inUse) ;
+mapClasses = [20 16 9 12];
 figure(200) ; clf ;
-cmap = plot_legend(imdb) ;
+cmap = plot_legend(timdb) ;
 for s = 1:numel(opts.suffix)
   vl_xmkdir(opts.segPublishDir{s});
   print(fullfile(opts.segPublishDir{s}, [opts.dataset '-legend.pdf']), '-dpdf') ;
@@ -31,7 +32,7 @@ for s = 1:numel(opts.suffix)
     name = opts.encoders{s}{j}.name ;
     if ~isfield(encoders, 'name')
       fprintf('loading encoder %s\n', name) ;
-      encoders.(name) = load(opts.encoders{s}{j}.path) ;
+      encoders.(name) = load(opts.encoders_t{s}{j}.path) ;
       if isfield(encoders.(name), 'net')
         if opts.useGpu
           encoders.(name).net = vl_simplenn_move(encoders.(name).net, 'gpu') ;
@@ -45,7 +46,7 @@ for s = 1:numel(opts.suffix)
   end
 
   % load the SVM classifiers for this setup
-  tmp = load(opts.resultPath{s}) ;
+  tmp = load(opts.resultPath_t{s}) ;
   models(s).w = tmp.w ;
   models(s).b = tmp.b ;
 
@@ -57,14 +58,17 @@ end
 % -------------------------------------------------------------------------
 
 rng(0) ;
-printThisImage = false(1, numel(imdb.images.id)) ;
+printThisImage = true(1, numel(imdb.images.id)) ;
 test = find(imdb.images.set <= 3) ;
 printThisImage(vl_colsubset(test, 60)) = true ;
 confusion = cell(1, numel(imdb.images.id)) ;
 
 %fprintf('num labs: %d\n', matlabpool('size')) ;
-parfor i = 1:numel(imdb.images.id)
-  confusion{i} = do_one_image(opts, encoders, models, imdb, classes, cmap, printThisImage, i) ;
+delete(gcp('nocreate'));
+% numWorkers = parpool('local', 2) ;
+% parfor i = 1:numel(imdb.images.id)
+for i = 2
+  confusion{i} = do_one_image(opts, encoders, models, imdb, classes, cmap, printThisImage, samplevocClasses, mapClasses, i) ;
 end
 
 for s = 1:numel(opts.suffix)
@@ -108,7 +112,7 @@ function confusion_ = loadIntermediate(scoresPath)
 load(scoresPath, 'confusion_') ;
 
 % -------------------------------------------------------------------------
-function confusion = do_one_image(opts, encoders, models, imdb, classes, cmap, printThisImage, i)
+function confusion = do_one_image(opts, encoders, models, imdb, classes, cmap, printThisImage, samplevocClasses, mapClasses, i)
 % -------------------------------------------------------------------------
 if ismember(imdb.images.set(i), [1 2]), setName = 'train' ; else setName = 'test' ; end
 task = getCurrentTask() ;
@@ -135,7 +139,11 @@ for s = 1:numel(opts.suffix)
     switch opts.segProposalType
       case 'crisp'
         regions = read_crisp_regions(...
-          fullfile(imdb.segmDir, 'crisp', sprintf('%s.png', baseName)), ...
+          fullfile(imdb.segmDir, 'crisp', sprintf('%s_crisp.jpg', baseName)), ...
+          [size(im,1) size(im,2)]) ;
+      case 'speedy'
+        regions = read_crisp_regions(...
+          fullfile(imdb.segmDir, 'speedy', sprintf('%s_speedy.jpg', baseName)), ...
           [size(im,1) size(im,2)]) ;
       case 'scg'
         regions = read_scg_regions(...
@@ -157,11 +165,18 @@ for s = 1:numel(opts.suffix)
     end
     psi = cat(1, psi{:}) ;
 
+    if (size(psi) == [0 0])
+        continue
+    end
+
     % evaluate classifiers
     scores = bsxfun(@plus, models(s).w' * psi, models(s).b') ;
 
     % compute confusion and save results
     [~,~,gt] = os_get_gt_regions(imdb, imdb.images.id(i)) ;
+    for i = 1:numel(samplevocClasses)
+        gt(gt == samplevocClasses(i)) = mapClasses(i);
+    end
     [confusion_, gt_, pred_] = evaluate_seg(classes, gt, regions, scores) ;
     saveIntermediate(scoresPath, scores, confusion_) ;
 
@@ -224,7 +239,7 @@ else
     sel = find(gt_(:) > 0);
     c = accumarray([gt_(sel), pred_(sel)], 1, [numClasses numClasses+1]) ;
 end
-if 0
+if 1
   cmap = [[1 1 1] ; distinguishable_colors(numel(classes))] ;
   figure(100) ; clf ;
   subplot(1,2,1); image(gt_+1); axis equal ; title('(partial) gt') ;

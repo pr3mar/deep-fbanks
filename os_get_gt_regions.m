@@ -86,6 +86,7 @@ if 0
   subplot(1,2,1) ; imagesc(im) ; title(imdb.images.name{ii}) ;
   subplot(1,2,2) ; image(gt_ + 1);
   colormap([ [1,1,1]; distinguishable_colors(sum(imdb.meta.inUse))]) ;
+  drawnow;
 end
 
 end

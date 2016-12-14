@@ -259,8 +259,9 @@ batchResults = cell(1, numel(batches)) ;
 
 % just use as many workers as are already available
 %numWorkers = matlabpool('size') ;
-% numWorkers = parpool('local') ;
-% parfor (b = 1:numel(batches), numWorkers)
+% delete(gcp('nocreate'))
+% numWorkers = parpool('local', 2) ;
+% parfor b = 1:numel(batches)
 for b = 1:numel(batches)
   batchResults{b} = get_batch_results(imdb, imageIds, batches{b}, ...
     encoder, opts.maxNumLocalDescriptorsReturned) ;
@@ -385,7 +386,7 @@ end
 % Step 0: sample descriptors
 fprintf('%s: getting local descriptors to train GMM\n', mfilename) ;
 code = encoder_extract_for_segments(encoder, imdb, segmentIds) ;
-descrs = cell(1, numel(code)) ;
+descrs = cell(1, numel(code)) ; % encoder
 numImages = numel(code);
 numDescrsPerImage = floor(encoder.numWords * opts.numSamplesPerWord / numImages);
 for i=1:numel(code)

@@ -6,6 +6,7 @@ assert(opts.seed == 1) ; % there is only one split
 
 imdb.imageDir = fullfile(vocDir, 'JPEGImages') ;
 imdb.maskDir = fullfile(vocDir, 'Masks'); % doesn't exist
+imdb.segmDir = fullfile(vocDir, 'segm');
 imdb.classes.name={...
   'aeroplane'
   'bicycle'
@@ -52,7 +53,7 @@ for c = 1:numClass,
   end
 end
 
-% Loop over images and record the imag sets
+% Loop over images and record the image sets
 for s = 1:length(imageSets),
   imageSetPath = fullfile(vocDir, 'ImageSets', 'Main', sprintf('%s.txt',imageSets{s}));
   gtids = textread(imageSetPath,'%s');

@@ -18,7 +18,7 @@ function [code, codeLoc] = get_dcnn_features(net, im, regions, varargin)
 
 opts.useSIFT = false ;
 opts.crop = true ;
-%opts.scales = [0.5 0.75 1] ; %CUB
+opts.scales = [0.5 0.75 1] ; %CUB
 opts.scales = 2.^(1.5:-.5:-3); % as in CVPR14 submission
 opts.encoder = [];
 opts.numSpatialSubdivisions = 1 ;
@@ -76,6 +76,9 @@ for k=1:numel(im)
       im{k} = imresize(im{k}, 1 / min_ratio);
       regions{k}.basis = imresize(regions{k}.basis, 1/min_ratio, 'nearest');
   end
+  if isequal(k, 243)
+      k
+  end
   [im_cropped, regions_cropped] = crop(opts, single(im{k}), regions{k}, border) ;
 
   crop_h = size(im_cropped,1) ;
@@ -130,7 +133,7 @@ for k=1:numel(im)
       mask_features = mask_resized(sub2ind(size(mask_resized), v, u)) ;
       psi{r}{s} = descrs(:, mask_features) ;
       loc{r}{s} = loc_(:, mask_features) ;
-      if 0
+      if 1
         figure(100) ; clf ;
         imagesc(vl_imsc(im_resized)) ; hold on ;
         plot(u,v,'g.') ;
@@ -256,7 +259,6 @@ function [imCrop, regionsCrop] = crop(opts, im, regions, border)
 
 box = enclosingBox(regions.basis) ;
 
-% include a border around it (feature support)
 w = diff(box([1 3])) + border ;
 h = diff(box([2 4])) + border ;
 bx = mean(box([1 3])) ;
@@ -269,7 +271,8 @@ sbox = boxclip(sbox, [size(im,2), size(im,1)]) ;
 % crop image and mask
 sx = sbox(1):sbox(3) ;
 sy = sbox(2):sbox(4) ;
-imCrop = im(sy, sx, :) ;
+imCrop = im(sy, sx, :) ;% include a border around it (feature support)
+
 regionsCrop = regions ;
 regionsCrop.basis = regions.basis(sy, sx, :) ;
 
