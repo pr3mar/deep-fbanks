@@ -32,11 +32,11 @@ function run_experiments_seg()
     'numPcaDimensions', 80} ;
 
   if 1
-    proposalList = {'speedy'}; %'crisp', 'scg200'} ;
-    %datasetList = {'os','msrc'} ;
-    datasetList = {'samplevoc07'} ;
-    tranferDatasetList = {'msrc'};
-%     datasetList = {'msrc'} ;
+    proposalList = {'mcg'}; %, 'speedy', 'crisp', 'scg200'} ;
+%     datasetList = {'os'} ;
+%     datasetList = {'samplevoc07'} ;
+    tranferDatasetList = {'voc07'};%,'msrc'};
+    datasetList = {'coco'} ;
 %     setupNameList = {'rcnn', 'dcnn', 'rdcnn'} ;
 %     encoderList = {{rcnn}, {dcnn}, {rcnn dcnn}} ;
     setupNameList = {'dcnn'};
@@ -57,8 +57,7 @@ function run_experiments_seg()
   for qq = 1 : numel(proposalList)
     for ii = 1 : numel(datasetList)
       for jj = 1 : numSplits(ii)
-        os_seg_test(...
-          'transferDataset', tranferDatasetList{ii}, ...
+        os_seg_test_orig(...
           'dataset', datasetList{ii}, ...
           'seed', jj, ...
           'encoders', encoderList, ...
@@ -66,6 +65,7 @@ function run_experiments_seg()
           'suffix', setupNameList , ...
           'segProposalType', proposalList{qq}, ...
           'useGpu', false) ;
+%       'transferDataset', tranferDatasetList{ii}, ...
       end
     end
   end

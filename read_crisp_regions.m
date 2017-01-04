@@ -24,7 +24,7 @@ regions.areas = areas(2:end) ;
 
 % after resizing some regions could be entirely lost; we should remove
 % these from the list
-ok = regions.areas > 200 ;
+ok = regions.areas > 0 ;
 if any(~ok)
   regions.areas(~ok) = [] ;
   regions.labels(~ok) = [] ;

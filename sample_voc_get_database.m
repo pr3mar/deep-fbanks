@@ -13,20 +13,32 @@ imdb.classes.name={...
   'bird'
   'aeroplane'
   'car'
+  'cow'
+  'horse'
+  'bicycle'
+  'dog'
+  'chair'
+  'boat'
  };
 imdb.classes.colors = [
     0 0 0
-    64 0 0
-    128 128 0
-    128 0 0
-    128 128 128
+    64 0 0 % cat
+    128 128 0 % bird
+    128 0 0 % aeroplane
+    128 128 128 % car
+    64 128 0 % cow
+    192 0 128 % horse
+    0 128 0 % bicycle
+    64 0 128 % dog
+    192 0 0 %chair
+    0 0 128 % boat
 ];
 numClass = length(imdb.classes.name);
 
 % source images
 imageFiles = dir(fullfile(imdb.imageDir, '*.jpg'));
 imdb.images.name = {imageFiles.name};
-gtFiles = dir(fullfile(imdb.gtDir, '*.jpg'));
+gtFiles = dir(fullfile(imdb.gtDir, '*.png'));
 imdb.images.gt_name = {gtFiles.name};
 numImages = length(imdb.images.name);
 
@@ -58,6 +70,9 @@ imdb.meta.inUse = true(1,numel(imdb.meta.classes)) ;
 for ii = 1 : numel(imdb.images.name)
   mask = imread(fullfile(imdb.gtDir, imdb.images.gt_name{ii}));
   [~, labels] = ismember(reshape(mask, [], 3), imdb.classes.colors, 'rows') ;
+  if(numel(size(mask)) == 2)
+      keyboard
+  end
   labels = uint16(reshape(labels, size(mask,1), size(mask,2))) - 1 ;
   if 1
     figure(1) ; clf ;

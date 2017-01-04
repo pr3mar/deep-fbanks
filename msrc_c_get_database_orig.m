@@ -1,4 +1,4 @@
-function imdb = msrc_c_get_database(msrcDir)
+function imdb = msrc_c_get_database_orig(msrcDir)
 
 vl_xmkdir(fullfile(msrcDir, 'masks')) ;
 
@@ -36,7 +36,8 @@ imdb.meta.classColours = [
   64	64	0
   192	64	0] ;
 imdb.meta.inUse = true(1, numel(imdb.meta.classes));
-imdb.meta.inUse([1, 2, 3, 7, 8, 10, 14, 15, 17, 19, 22]) = 0;
+imdb.meta.inUse(5) = 0;
+imdb.meta.inUse(8) = 0;
 
 imNames = dir(fullfile(imdb.imageDir, '*.bmp'));
 imdb.images.name = {imNames.name};
@@ -60,11 +61,11 @@ for ii = 1 : numel(imdb.images.name)
     subplot(1,2,2) ; image(labels) ; colormap(imdb.meta.classColours/256) ; axis equal ;
     drawnow ;
   end
-  [~, imName, ~] = fileparts(imdb.images.name{ii});
   for c = setdiff(unique(labels(:))', [0 find(~imdb.meta.inUse)])
     imdb.segments.id(end + 1) = 1 + numel(imdb.segments.id);
     imdb.segments.imageId(end + 1) = imdb.images.id(ii) ;
     imdb.segments.label(end + 1) = c ;
+    [~, imName, ~] = fileparts(imdb.images.name{ii});
     crtSegName = sprintf('%s_%d.png', imName, c);
     imdb.segments.mask{end + 1} = crtSegName ;
     imwrite(labels == c, fullfile(imdb.maskDir, crtSegName));
@@ -76,18 +77,16 @@ end
 imdb.meta.sets = {'train', 'val', 'test'};
 imdb.images.set = zeros(1, numel(imdb.images.name));
 imdb.segments.set = ones(1, numel(imdb.segments.id));
-% for ii = 1 : numel(imdb.meta.sets)
-%   fid = fopen(fullfile(msrcDir, 'labels', [imdb.meta.sets{ii} '.txt']));
-%   if (fid > 0)
-%     lines = textscan(fid, '%s');
-%     fclose(fid);
-%     [lia, ~] = ismember(imdb.images.name, lines{1});
-%     imdb.images.set(lia) = ii;
-%     [lia, ~] = ismember(imdb.segments.imageId, imdb.images.id(lia));
-%     imdb.segments.set(lia) = ii;
-%   end
-% end
-imdb.segments.set = ones(1, numel(imdb.segments.id)) * 3;
-imdb.segments.set= imdb.images.id;
+for ii = 1 : numel(imdb.meta.sets)
+  fid = fopen(fullfile(msrcDir, 'labels', [imdb.meta.sets{ii} '.txt']));
+  if (fid > 0)
+    lines = textscan(fid, '%s');
+    fclose(fid);
+    [lia, ~] = ismember(imdb.images.name, lines{1});
+    imdb.images.set(lia) = ii;
+    [lia, ~] = ismember(imdb.segments.imageId, imdb.images.id(lia));
+    imdb.segments.set(lia) = ii;
+  end
+end
 
 imdb.segments.difficult = false(1, numel(imdb.segments.id)) ;

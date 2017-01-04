@@ -65,7 +65,8 @@ end
 
 numNull = 0 ;
 numReg = 0 ;
-
+code = {};
+codeLoc = {};
 % for each image
 for k=1:numel(im)
   % crop region
@@ -78,6 +79,9 @@ for k=1:numel(im)
   end
   if isequal(k, 243)
       k
+  end
+  if(numel(unique(regions{k}.basis)) == 1)
+      continue
   end
   [im_cropped, regions_cropped] = crop(opts, single(im{k}), regions{k}, border) ;
 
@@ -133,7 +137,7 @@ for k=1:numel(im)
       mask_features = mask_resized(sub2ind(size(mask_resized), v, u)) ;
       psi{r}{s} = descrs(:, mask_features) ;
       loc{r}{s} = loc_(:, mask_features) ;
-      if 1
+      if 0
         figure(100) ; clf ;
         imagesc(vl_imsc(im_resized)) ; hold on ;
         plot(u,v,'g.') ;
@@ -172,6 +176,11 @@ if isempty(opts.encoder)
 else
   numSelDescr = 250000;
   % encoding (supports BoVW, VLAD and FV)
+  if numel(code) == 0
+%       code = {};
+%       codeLoc = {};
+      return
+  end
   for k=1:numel(code)
     for r = 1:numel(code{k})
       descrs = opts.encoder.projection * bsxfun(@minus, code{k}{r}, ...
@@ -233,6 +242,9 @@ else
       end
       % normalization keeps norm = 1
       code{k}{r} = cat(1, tmp{:}) / (opts.numSpatialSubdivisions(1) * opts.numSpatialSubdivisions(2)) ;
+    end
+    if ~iscell(code{k})
+        keyboard
     end
     code{k} = cat(2, code{k}{:}) ;
   end

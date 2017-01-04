@@ -7,7 +7,7 @@ end
 
 opts.transf = {};
 opts.seed = 1 ;
-opts.batchSize = 128 ;
+opts.batchSize = 256 ;
 opts.useGpu = true ;
 opts.regionBorder = 0.05 ;
 opts.numDCNNWords = 64 ;
@@ -28,6 +28,7 @@ opts.cubDir = 'data/cub';
 opts.vocDir = 'data/VOC2007';
 opts.sampleVocDir = 'data/voc07_sample';
 opts.vocDir12 = 'data/VOC2012';
+opts.cocoDir = 'data/MSCOCO';
 opts.writeResults = false;
 opts.compid = 'comp2';
 opts.publishDir = 'D:\dev\r\deep-fbanks\data\pubDir' ;
@@ -164,6 +165,8 @@ else
         imdb = cub_get_database(opts.cubDir, false);
       case 'alot'
         imdb = alot_get_database(opts.alotDir, 'seed', opts.seed);
+      case 'coco'
+        imdb = coco_get_database(opts.cocoDir);
       otherwise
         serror('Unknown dataset %s', opts.dataset) ;
     end
