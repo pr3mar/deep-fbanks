@@ -245,6 +245,7 @@ else
     end
     if ~iscell(code{k})
         keyboard
+        code{k} = {zeros(size(code{k-1}))};
     end
     code{k} = cat(2, code{k}{:}) ;
   end

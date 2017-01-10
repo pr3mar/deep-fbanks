@@ -57,14 +57,14 @@ end
 % -------------------------------------------------------------------------
 
 rng(0) ;
-printThisImage = false(1, numel(imdb.images.id)) ;
+printThisImage = true(1, numel(imdb.images.id)) ;
 test = find(imdb.images.set <= 3) ;
 printThisImage(vl_colsubset(test, 60)) = true ;
 confusion = cell(1, numel(imdb.images.id)) ;
 
 %fprintf('num labs: %d\n', matlabpool('size')) ;
 % parfor i = 1:numel(imdb.images.id)
-seg_names = dir(fullpath(imdb.segmDir, 'mcg', '*.png'));
+seg_names = dir(fullfile(imdb.segmDir, 'mcg', '*.png'));
 seg_names = {seg_names.name};
 
 for i = 1:numel(imdb.images.id)
@@ -146,7 +146,7 @@ for s = 1:numel(opts.suffix)
           [size(im,1) size(im,2)]) ;
       case 'mcg'
         regions = read_crisp_regions(...
-          fullfile(imdb.segmDir, 'mcg', sprintf('%s_mcg.png', baseName)), ...
+          fullfile(imdb.segmDir, 'mcg', sprintf('%s.png', baseName)), ...
           [size(im,1) size(im,2)]) ;
       case 'scg'
         regions = read_scg_regions(...
