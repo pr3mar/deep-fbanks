@@ -27,24 +27,71 @@ function [ imdb ] = coco_get_database( cocoDir )
     imdb.images.name = {imNames.name};
     imdb.images.id = 1:numel(imdb.images.name);
     imNames = dir(fullfile(imdb.maskDir, '*.png'));
-    imdb.segments.seg_name = {imNames.name};
-    imdb.segments.mask = imdb.segments.seg_name;
+%     imdb.segments.seg_name = {imNames.name};
+    imdb.segments.mask = {imNames.name};
     imdb.segments.id = [];
     imdb.segments.imageId = [];
     imdb.segments.label = [];
     imNames = [imdb.images.name];
-    for ii = 1 : numel(imdb.segments.seg_name)
-        [~, imName, ~] = fileparts(imdb.segments.seg_name{ii});
+    
+    seg_names = dir(fullfile(imdb.segmDir, 'mcg', '*.png'));
+    seg_names = {seg_names.name};
+    imdb.images.name = {};
+    imdb.images.id = [];
+    for ii = 1:numel(seg_names)
+        [~, im_name, ~] = fileparts(seg_names{ii});
+        im_name = strcat(im_name, '.jpg');
+        if ismember(im_name, imNames)
+            imdb.images.name{end + 1} = im_name;
+            imdb.images.id(end + 1) = 1 + numel(imdb.images.id);
+        end
+    end
+    imNames = [imdb.images.name];
+    maskNames = [imdb.segments.mask];
+    imdb.segments.mask = {};
+    imdb.segments.id = [];    
+    for ii = 1 : numel(maskNames)
+        [~, imName, ~] = fileparts(maskNames{ii});
         splitted = strsplit(imName, '_');
         im_name = strcat(splitted{1}, '.jpg');
-        imdb.segments.id(end + 1) = 1 + numel(imdb.segments.id);
-        imdb.segments.imageId(end + 1) = find(strcmp(imNames, im_name));
-        imdb.segments.label(end + 1) = find(imdb.meta.classID == str2double(splitted{2}));
+        if ismember(im_name, imNames)
+            imdb.segments.mask{end + 1} = maskNames{ii};
+            imdb.segments.id(end + 1) = 1 + numel(imdb.segments.id);
+            imdb.segments.imageId(end + 1) = find(strcmp(imNames, im_name));
+            imdb.segments.label(end + 1) = find(imdb.meta.classID == str2double(splitted{2}));
+        end
     end
+%     fun = @(x) ~isempty(x) && isequal(1, x(1));
+%     for ii = 1 : numel(imNames)
+%         [~, im_name, ~] = fileparts(imNames{ii});
+%         rez_ = strfind(maskNames, im_name);
+%         rez = find(cellfun(fun, rez_));
+%         for jj = 1 : numel(rez)
+%             [~, imName, ~] = fileparts(maskNames{rez(jj)});
+%             splitted = strsplit(imName, '_');
+%             im_name = strcat(splitted{1}, '.jpg');
+%             imdb.segments.mask{end + 1} = maskNames{rez(jj)};
+%             imdb.segments.id(end + 1) = 1 + numel(imdb.segments.id);
+%             imdb.segments.imageId(end + 1) = find(strcmp(imNames, im_name));
+%             imdb.segments.label(end + 1) = find(imdb.meta.classID == str2double(splitted{2}));
+%         end
+%     end
+%     for ii = 1 : numel(imdb.segments.seg_name)
+%         [~, imName, ~] = fileparts(imdb.segments.seg_name{ii});
+%         splitted = strsplit(imName, '_');
+%         im_name = strcat(splitted{1}, '.jpg');
+%         imdb.segments.id(end + 1) = 1 + numel(imdb.segments.id);
+%         imdb.segments.imageId(end + 1) = find(strcmp(imNames, im_name));
+%         imdb.segments.label(end + 1) = find(imdb.meta.classID == str2double(splitted{2}));
+%     end
     
     imdb.meta.sets = {'train', 'val', 'test'};
     imdb.images.set = ones(1, numel(imdb.images.name));
+    random_indices = randperm(numel(imdb.images.name), 400);
+    imdb.images.set(random_indices) = 3;
     imdb.segments.set = ones(1, numel(imdb.segments.id));
+    [~, ids, ~] = intersect(imdb.segments.imageId, random_indices);
+    imdb.segments.set(ids) = 3;
     imdb.segments.difficult = false(1, numel(imdb.segments.id));
 end
 
