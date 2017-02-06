@@ -1,11 +1,11 @@
-function imdb = msrc_c_get_database(msrcDir)
+function imdb = msrc_c_get_database_nobg(msrcDirNOBG, argin)
 
-vl_xmkdir(fullfile(msrcDir, 'masks')) ;
+vl_xmkdir(fullfile(msrcDirNOBG, 'masks')) ;
 
-imdb.imageDir = fullfile(msrcDir, 'images');
-imdb.gtDir = fullfile(msrcDir, 'gt');
-imdb.maskDir = fullfile(msrcDir, 'masks');
-imdb.segmDir = fullfile(msrcDir, 'segm');
+imdb.imageDir = fullfile(msrcDirNOBG, 'images');
+imdb.gtDir = fullfile(msrcDirNOBG, 'gt');
+imdb.maskDir = fullfile(msrcDirNOBG, 'masks');
+imdb.segmDir = fullfile(msrcDirNOBG, 'segm');
 imdb.meta.classes = {'building', 'grass', 'tree', 'cow', ...
   'horse', 'sheep', 'sky', 'mountain', 'aeroplane', 'water', 'face', ...
   'car', 'bicycle', 'flower', 'sign', 'bird', 'book', 'chair', 'road', ...
@@ -47,10 +47,16 @@ imdb.images.id = 1:numel(imdb.images.name);
 imNames = dir(fullfile(imdb.gtDir, '*.bmp'));
 imdb.images.gt_name = {imNames.name};
 
+% imdb.images.vocid = cellfun(@(S) S(1:end-4), imdb.images.name, 'UniformOutput', false);
+
 imdb.segments.id = [];
 imdb.segments.imageId = [];
+imdb.segments.set = [];
 imdb.segments.label = [];
 imdb.segments.mask = {};
+
+[~, id_other] = ismember(imdb.meta.classes, 'other');
+id_other = find(id_other);
 
 for ii = 1 : numel(imdb.images.name)
   mask = imread(fullfile(imdb.gtDir, imdb.images.gt_name{ii}));
@@ -63,8 +69,6 @@ for ii = 1 : numel(imdb.images.name)
     drawnow ;
   end
   [~, imName, ~] = fileparts(imdb.images.name{ii});
-  [~, id_other] = ismember(imdb.meta.classes, 'other');
-  id_other = find(id_other);
   other = zeros(size(labels));
   for c = setdiff(unique(labels(:))', [0 find(~imdb.meta.inUse)])
     imdb.segments.id(end + 1) = 1 + numel(imdb.segments.id);
@@ -81,7 +85,7 @@ for ii = 1 : numel(imdb.images.name)
   crtSegName = sprintf('%s_%d.png', imName, id_other);
   imdb.segments.mask{end + 1} = crtSegName ;
   imwrite(~other, fullfile(imdb.maskDir, crtSegName));
-  imwrite(labels, fullfile(imdb.maskDir, [imName '.png']));
+%   imwrite(labels, fullfile(imdb.maskDir, [imName '.png']));
 end
 
 % split images in train, val, test
@@ -89,19 +93,19 @@ imdb.meta.sets = {'train', 'val', 'test'};
 imdb.images.set = ones(1, numel(imdb.images.name));
 imdb.segments.set = ones(1, numel(imdb.segments.id));
 
+for ii = 1 : numel(imdb.meta.sets)
+  fid = fopen(fullfile(msrcDirNOBG, 'labels', [imdb.meta.sets{ii} '.txt']));
+  if (fid > 0)
+    lines = textscan(fid, '%s');
+    fclose(fid);
+    [lia, ~] = ismember(imdb.images.name, lines{1});
+    imdb.images.set(lia) = ii;
+    [lia, ~] = ismember(imdb.segments.imageId, imdb.images.id(lia));
+    imdb.segments.set(lia) = ii;
+  end
+end
 
 
-% for ii = 1 : numel(imdb.meta.sets)
-%   fid = fopen(fullfile(msrcDir, 'labels', [imdb.meta.sets{ii} '.txt']));
-%   if (fid > 0)
-%     lines = textscan(fid, '%s');
-%     fclose(fid);
-%     [lia, ~] = ismember(imdb.images.name, lines{1});
-%     imdb.images.set(lia) = ii;
-%     [lia, ~] = ismember(imdb.segments.imageId, imdb.images.id(lia));
-%     imdb.segments.set(lia) = ii;
-%   end
-% end
 % imdb.segments.set = ones(1, numel(imdb.segments.id)) * 3;
 
 imdb.segments.difficult = false(1, numel(imdb.segments.id)) ;

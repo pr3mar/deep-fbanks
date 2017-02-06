@@ -58,6 +58,8 @@ if ~all(ok)
   warning('Dropping some empty gt regions') ;
 end
 regions.labels = regions.labels(ok) ;
+regions.area = regions.area(ok) ;
+regions.segmentIndex = regions.segmentIndex(ok) ;
 
 % now create a segmentation mask with class labels for the regions
 if (size(imdb.segments.label, 1) == 1)

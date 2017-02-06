@@ -24,9 +24,12 @@ opts.kthDir = 'data/kth';
 opts.alotDir = 'data/alot';
 opts.mitDir = 'data/mit_indoor';
 opts.msrcDir = 'data/msrc_c';
+opts.msrcDirNOBG = 'data/msrc_c_nobg';
 opts.cubDir = 'data/cub';
 opts.vocDir = 'data/VOC2007';
 opts.sampleVocDir = 'data/voc07_sample';
+opts.sampleVocDirNoBG = 'data/voc07_sample_nobg';
+opts.msrcVocDirNoBG = 'data/combined_msrc_voc';
 opts.vocDir12 = 'data/VOC2012';
 opts.cocoDir = 'data/MSCOCO';
 opts.writeResults = false;
@@ -151,6 +154,10 @@ else
         imdb = voc_get_database(opts.vocDir, 'seed', opts.seed);
       case 'samplevoc07'
         imdb = sample_voc_get_database(opts.sampleVocDir, 'seed', opts.seed);
+      case 'samplevoc07_nobg'
+        imdb = sample_voc_get_database_nobg(opts.sampleVocDirNoBG);
+      case 'msrc_voc'
+        imdb = msrc_voc_get_database_nobg(opts.msrcVocDirNoBG, 'seed', opts.seed);
       case 'voc12'
         imdb = voc_get_database(opts.vocDir12, 'seed', opts.seed);
       case 'voc12s'
@@ -159,6 +166,8 @@ else
         imdb = mit_indoor_get_database(opts.mitDir);
       case 'msrc'
         imdb = msrc_c_get_database(opts.msrcDir);
+      case 'msrc_nobg'
+        imdb = msrc_c_get_database_nobg(opts.msrcDirNOBG);
       case 'cubcrop'
         imdb = cub_get_database(opts.cubDir, true);
       case 'cub'
@@ -208,6 +217,10 @@ switch opts.transferDataset
     timdb = voc_get_database(opts.vocDir, 'seed', opts.seed);
   case 'samplevoc07'
     timdb = sample_voc_get_database(opts.sampleVocDir, 'seed', opts.seed);
+  case 'samplevoc07_nobg'
+    timdb = sample_voc_get_database_nobg(opts.sampleVocDirNoBG, 'seed', opts.seed);
+  case 'msrc_voc'
+    imdb = msrc_voc_get_database_nobg(opts.msrcVocDirNoBG, 'seed', opts.seed);
   case 'voc12'
     timdb = voc_get_database(opts.vocDir12, 'seed', opts.seed);
   case 'voc12s'
@@ -216,6 +229,8 @@ switch opts.transferDataset
     timdb = mit_indoor_get_database(opts.mitDir);
   case 'msrc'
     timdb = msrc_c_get_database(opts.msrcDir);
+  case 'msrc_nobg'
+    timdb = msrc_c_get_database_nobg(opts.msrcDirNOBG);
   case 'cubcrop'
     timdb = cub_get_database(opts.cubDir, true);
   case 'cub'

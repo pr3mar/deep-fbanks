@@ -64,14 +64,11 @@ confusion = cell(1, numel(imdb.images.id)) ;
 
 %fprintf('num labs: %d\n', matlabpool('size')) ;
 % parfor i = 1:numel(imdb.images.id)
-seg_names = dir(fullfile(imdb.segmDir, 'mcg', '*.png'));
-seg_names = {seg_names.name};
+gt_names = dir(fullfile(imdb.gtDir, '*.png'));
+gt_names = {gt_names.name};
 
-for i = 1:numel(imdb.images.id)
-  confusion{i} = do_one_image(opts, encoders, models, imdb, classes, cmap, printThisImage, i) ;
-  if ~iscell(confusion{i})
-      confusion{i} = {zeros(size(confusion{i-1}))};
-  end
+for i = 1:numel(imdb.images.name)
+  confusion{i} = do_one_image(opts, encoders, models, imdb, classes, cmap, printThisImage, i, gt_names) ;
 end
 
 for s = 1:numel(opts.suffix)
@@ -115,23 +112,25 @@ function confusion_ = loadIntermediate(scoresPath)
 load(scoresPath, 'confusion_') ;
 
 % -------------------------------------------------------------------------
-function confusion = do_one_image(opts, encoders, models, imdb, classes, cmap, printThisImage, i)
+function confusion = do_one_image(opts, encoders, models, imdb, classes, cmap, printThisImage, i, gt_names)
 % -------------------------------------------------------------------------
+%TODO: FIX GETTING THE IMAGE!!!
 if ismember(imdb.images.set(i), [1 2]), setName = 'train' ; else setName = 'test' ; end
 task = getCurrentTask() ;
 if ~isempty(task), tid = task.ID ; else tid = 1 ; end
 fprintf('Task %5d: segmenting image %d of %d (%s)\n', tid, i, numel(imdb.images.id), setName) ;
 [~,baseName,~] = fileparts(imdb.images.name{i}) ;
 features = struct() ;
+[~, id_other] = ismember(imdb.meta.classes, 'other');
+id_other = find(id_other);
+
 for s = 1:numel(opts.suffix)
   setupName = opts.suffix{s} ;
   [setupLoc,setupBaseName,~] = fileparts(opts.segResultPath{s}) ;
   scoresPath = fullfile(setupLoc, setupBaseName, [baseName '-scores.mat']) ;
   nClasses = numel(classes);
-
-
   seg_labels = imdb.segments.label(:, imdb.segments.imageId == imdb.images.id(i));
-  if (max(max(seg_labels)) == 0)
+  if (max(max(seg_labels)) == 0 || numel(seg_labels) == 1 && ~isempty(ismember(seg_labels, id_other)) && sum(ismember(seg_labels, id_other)) == 1)
     confusion_ = zeros(nClasses, nClasses + 1);
   elseif exist(scoresPath)
     % load previous results
@@ -146,7 +145,23 @@ for s = 1:numel(opts.suffix)
           [size(im,1) size(im,2)]) ;
       case 'mcg'
         regions = read_crisp_regions(...
-          fullfile(imdb.segmDir, 'mcg', sprintf('%s.png', baseName)), ...
+          fullfile(imdb.segmDir, 'mcg', sprintf('%s_mcg.png', baseName)), ...
+          [size(im,1) size(im,2)]) ;
+      case 'mcg_0-15'
+        regions = read_crisp_regions(...
+          fullfile(imdb.segmDir, 'mcg_0-15', sprintf('%s_mcg.png', baseName)), ...
+          [size(im,1) size(im,2)]) ;
+      case 'mcg_0-45'
+        regions = read_crisp_regions(...
+          fullfile(imdb.segmDir, 'mcg_0-45', sprintf('%s_mcg.png', baseName)), ...
+          [size(im,1) size(im,2)]) ;
+      case 'mcg_0-65'
+        regions = read_crisp_regions(...
+          fullfile(imdb.segmDir, 'mcg_0-65', sprintf('%s_mcg.png', baseName)), ...
+          [size(im,1) size(im,2)]) ;
+      case 'mcg_0-85'
+        regions = read_crisp_regions(...
+          fullfile(imdb.segmDir, 'mcg_0-85', sprintf('%s_mcg.png', baseName)), ...
           [size(im,1) size(im,2)]) ;
       case 'scg'
         regions = read_scg_regions(...
@@ -155,6 +170,13 @@ for s = 1:numel(opts.suffix)
         regions = read_scg_regions(...
           fullfile(imdb.segmDir, 'scg_proposals', sprintf('%s.mat', baseName)), ...
           'maxNumRegions', 200) ;
+    end
+    
+    bas = unique(regions.basis);
+    
+    if numel(bas) == 1 && bas(1) == 0
+        confusion{s} = zeros(nClasses, nClasses + 1);
+        continue;
     end
 
     % get the region features
@@ -168,9 +190,9 @@ for s = 1:numel(opts.suffix)
       psi{j} = features.(n) ;
     end
     psi = cat(1, psi{:}) ;
-    if i == 311 || numel(psi) == 0
-        confusion = -1;
-        return
+    if numel(psi) == 0 
+        confusion_ = zeros(nClasses, nClasses + 1);
+        break;
     end
     % evaluate classifiers
     scores = bsxfun(@plus, models(s).w' * psi, models(s).b') ;
@@ -239,14 +261,14 @@ else
     sel = find(gt_(:) > 0);
     c = accumarray([gt_(sel), pred_(sel)], 1, [numClasses numClasses+1]) ;
 end
-if 0
+if 1
   cmap = [[1 1 1] ; distinguishable_colors(numel(classes))] ;
   figure(100) ; clf ;
   subplot(1,2,1); image(gt_+1); axis equal ; title('(partial) gt') ;
   subplot(1,2,2); image(pred_+1); axis equal ; title('predicted') ;
   colormap(cmap) ;
   drawnow ;
-  keyboard
+%   keyboard
 end
 
 % -------------------------------------------------------------------------

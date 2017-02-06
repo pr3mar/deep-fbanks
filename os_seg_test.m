@@ -7,8 +7,18 @@ function os_seg_test(varargin)
 classes = find(timdb.meta.inUse) ;
 samplevocClasses  = find(imdb.meta.inUse) ;
 %switch opts.
-mapClasses = [20 16 9 12 4 5 13 21 18 23];  % VOC  -> MSRC
-mapClasses = [10 13 17 1 15 7 2 3 9 8 12 4];% MSRC -> VOC
+% mapClasses = [20 16 9 12 4 5 13 21 18 23];  % VOC  -> MSRC
+% mapClasses = [10 13 17 1 15 7 2 3 9 8 12 4];% MSRC -> VOC
+if numel(classes) ~= numel(samplevocClasses)
+    error('Classes not compatible');
+end
+% mapping from original to transferred class indices
+mapClasses = zeros(1, numel(classes));
+for i = 1:numel(classes)
+    id = ismember(timdb.meta.classes, imdb.meta.classes(samplevocClasses(i)));
+%     id = ismember(imdb.meta.classes, timdb.meta.classes(classes(i)));
+    mapClasses(i) = find(id);
+end
 figure(200) ; clf ;
 cmap = plot_legend(timdb) ;
 for s = 1:numel(opts.suffix)
@@ -48,7 +58,8 @@ for s = 1:numel(opts.suffix)
   end
 
   % load the SVM classifiers for this setup
-  tmp = load(opts.resultPath_t{s}) ;
+  % load transferred dataset classifier
+  tmp = load(opts.resultPath_t{s}) ; 
   models(s).w = tmp.w ;
   models(s).b = tmp.b ;
 
@@ -66,12 +77,12 @@ printThisImage(vl_colsubset(test, 60)) = true ;
 confusion = cell(1, numel(imdb.images.id)) ;
 
 %fprintf('num labs: %d\n', matlabpool('size')) ;
-delete(gcp('nocreate'));
+% delete(gcp('nocreate'));
 % numWorkers = parpool('local', 2) ;
 % parfor i = 1:numel(imdb.images.id)
 for i = 1:numel(imdb.images.id)
     confusion{i} = do_one_image(opts, encoders, models, imdb, classes, cmap, printThisImage, samplevocClasses, mapClasses, i) ;
-    confusion{i} = {confusion{i}{1}(sort(mapClasses),sort(mapClasses))};
+%     confusion{i} = {confusion{i}{1}(sort(mapClasses),sort(mapClasses))};
 end
 
 for s = 1:numel(opts.suffix)
@@ -129,6 +140,9 @@ if ~isempty(task), tid = task.ID ; else tid = 1 ; end
 fprintf('Task %5d: segmenting image %d of %d (%s)\n', tid, i, numel(imdb.images.id), setName) ;
 [~,baseName,~] = fileparts(imdb.images.name{i}) ;
 features = struct() ;
+[~, id_other] = ismember(imdb.meta.classes, 'other');
+id_other = find(id_other);
+
 for s = 1:numel(opts.suffix)
   setupName = opts.suffix{s} ;
   [setupLoc,setupBaseName,~] = fileparts(opts.segResultPath{s}) ;
@@ -136,7 +150,8 @@ for s = 1:numel(opts.suffix)
   nClasses = numel(classes);
   
   seg_labels = imdb.segments.label(:, imdb.segments.imageId == imdb.images.id(i));
-  if (max(max(seg_labels)) == 0)
+%   if (max(max(seg_labels)) == 0) || i == 311
+  if (max(max(seg_labels)) == 0 || numel(seg_labels) == 1 && ~isempty(ismember(seg_labels, id_other)) && sum(ismember(seg_labels, id_other)) == 1)
     confusion_ = zeros(nClasses, nClasses + 1);
   elseif exist(scoresPath)
     % load previous results
@@ -165,6 +180,12 @@ for s = 1:numel(opts.suffix)
           fullfile(imdb.segmDir, 'scg_proposals', sprintf('%s.mat', baseName)), ...
           'maxNumRegions', 200) ;
     end
+    bas = unique(regions.basis);
+    
+    if numel(bas) == 1 && bas(1) == 0
+        confusion{s} = zeros(nClasses, nClasses + 1);
+        continue;
+    end
 
     % get the region features
     psi = {} ;
@@ -176,10 +197,9 @@ for s = 1:numel(opts.suffix)
       psi{j} = features.(n) ;
     end
     psi = cat(1, psi{:}) ;
-
-    if (size(psi) == [0 0])
-        confusion = {zeros(20, 21)};
-        return
+    if numel(psi) == 0
+        confusion{s} = zeros(nClasses, nClasses + 1);
+        continue;
     end
 
     % evaluate classifiers

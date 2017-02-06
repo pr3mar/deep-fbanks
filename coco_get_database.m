@@ -34,18 +34,19 @@ function [ imdb ] = coco_get_database( cocoDir )
     imdb.segments.label = [];
     imNames = [imdb.images.name];
     
-    seg_names = dir(fullfile(imdb.segmDir, 'mcg', '*.png'));
-    seg_names = {seg_names.name};
-    imdb.images.name = {};
-    imdb.images.id = [];
-    for ii = 1:numel(seg_names)
-        [~, im_name, ~] = fileparts(seg_names{ii});
-        im_name = strcat(im_name, '.jpg');
-        if ismember(im_name, imNames)
-            imdb.images.name{end + 1} = im_name;
-            imdb.images.id(end + 1) = 1 + numel(imdb.images.id);
-        end
-    end
+%     seg_names = dir(fullfile(imdb.segmDir, 'mcg', '*.png'));
+%     seg_names = {seg_names.name};
+%     imdb.images.name = {};
+%     imdb.images.id = [];
+%     for ii = 1:numel(seg_names)
+%         [~, im_name, ~] = fileparts(seg_names{ii});
+%         splitted = strsplit(im_name, '_');
+%         im_name = strcat(splitted{1}, '.jpg');
+%         if ismember(im_name, imNames)
+%             imdb.images.name{end + 1} = im_name;
+%             imdb.images.id(end + 1) = 1 + numel(imdb.images.id);
+%         end
+%     end
     imNames = [imdb.images.name];
     maskNames = [imdb.segments.mask];
     imdb.segments.mask = {};
@@ -87,7 +88,7 @@ function [ imdb ] = coco_get_database( cocoDir )
     
     imdb.meta.sets = {'train', 'val', 'test'};
     imdb.images.set = ones(1, numel(imdb.images.name));
-    random_indices = randperm(numel(imdb.images.name), 400);
+    random_indices = randperm(numel(imdb.images.name), 4000);
     imdb.images.set(random_indices) = 3;
     imdb.segments.set = ones(1, numel(imdb.segments.id));
     [~, ids, ~] = intersect(imdb.segments.imageId, random_indices);

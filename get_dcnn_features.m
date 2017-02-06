@@ -80,9 +80,9 @@ for k=1:numel(im)
   if isequal(k, 243)
       k
   end
-  if(numel(unique(regions{k}.basis)) == 1)
-      continue
-  end
+%   if(numel(unique(regions{k}.basis)) == 1)
+%       continue
+%   end
   [im_cropped, regions_cropped] = crop(opts, single(im{k}), regions{k}, border) ;
 
   crop_h = size(im_cropped,1) ;
@@ -244,7 +244,7 @@ else
       code{k}{r} = cat(1, tmp{:}) / (opts.numSpatialSubdivisions(1) * opts.numSpatialSubdivisions(2)) ;
     end
     if ~iscell(code{k})
-        keyboard
+%         keyboard
         code{k} = {zeros(size(code{k-1}))};
     end
     code{k} = cat(2, code{k}{:}) ;

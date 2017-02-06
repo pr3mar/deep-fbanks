@@ -8,26 +8,27 @@ imdb.imageDir = fullfile(vocDir, 'JPEGImages') ;
 imdb.maskDir = fullfile(vocDir, 'Masks'); % doesn't exist
 imdb.segmDir = fullfile(vocDir, 'segm');
 imdb.classes.name={...
-  'aeroplane'
-  'bicycle'
-  'bird'
-  'boat'
-  'bottle'
-  'bus'
-  'car'
-  'cat'
-  'chair'
-  'cow'
-  'diningtable'
-  'dog'
-  'horse'
-  'motorbike'
-  'person'
-  'pottedplant'
-  'sheep'
-  'sofa'
-  'train'
-  'tvmonitor'};
+  'aeroplane' % 1!
+  'bicycle' % 2!
+  'bird' % 3!
+  'boat' % 4!
+  'bottle' %5
+  'bus' %6
+  'car' % 7!
+  'cat' % 8!
+  'chair' % 9!
+  'cow' % 11!
+  'diningtable' % 12
+  'dog' % 13!
+  'horse' % 14!
+  'motorbike' % 15
+  'person' % 16
+  'pottedplant' % 17
+  'sheep' % 18!
+  'sofa' % 19
+  'train' % 20
+  'tvmonitor' % 21
+  };
 numClass = length(imdb.classes.name);
 
 % source images
@@ -54,7 +55,7 @@ for c = 1:numClass,
 end
 
 % Loop over images and record the image sets
-for s = 1:length(imageSets),
+for s = 1:length(imageSets)
   imageSetPath = fullfile(vocDir, 'ImageSets', 'Main', sprintf('%s.txt',imageSets{s}));
   gtids = textread(imageSetPath,'%s');
   [membership, loc] = ismember(gtids, imdb.images.vocid);
@@ -79,3 +80,4 @@ imdb.segments.difficult = false(1, numel(imdb.segments.id)) ;
 % make this compatible with the OS imdb
 imdb.meta.classes = imdb.classes.name ;
 imdb.meta.inUse = true(1,numel(imdb.meta.classes)) ;
+imdb.meta.inUse([5, 6, 12, 15, 16, 17, 19, 20, 21]) = false;

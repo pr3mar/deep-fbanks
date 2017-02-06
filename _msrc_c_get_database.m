@@ -9,15 +9,15 @@ imdb.segmDir = fullfile(msrcDir, 'segm');
 imdb.meta.classes = {'building', 'grass', 'tree', 'cow', ...
   'horse', 'sheep', 'sky', 'mountain', 'aeroplane', 'water', 'face', ...
   'car', 'bicycle', 'flower', 'sign', 'bird', 'book', 'chair', 'road', ...
-  'cat', 'dog', 'body', 'boat', 'other'};
+  'cat', 'dog', 'body', 'boat'};
 imdb.meta.classColours = [
-  0     0	0
+  0	0	0
   128	0	0
-  0     128	0
+  0	128	0
   128	128	0
-  0     0	128
+  0	0	128
   128	0	128
-  0     128	128
+  0	128	128
   128	128	128
   64	0	0
   192	0	0
@@ -27,18 +27,16 @@ imdb.meta.classColours = [
   192	0	128
   64	128	128
   192	128	128
-  0     64	0
+  0	64	0
   128	64	0
-  0     192	0
+  0	192	0
   128	64	128
-  0     192	128
+  0	192	128
   128	192	128
   64	64	0
-  192	64	0
-  255 255 255] ;
-
+  192	64	0] ;
 imdb.meta.inUse = true(1, numel(imdb.meta.classes));
-imdb.meta.inUse([1, 2, 3, 7, 8, 10, 11, 14, 15, 17, 19, 22]) = 0;
+imdb.meta.inUse([1, 2, 3, 7, 8, 10, 14, 15, 17, 19, 22]) = 0;
 
 imNames = dir(fullfile(imdb.imageDir, '*.bmp'));
 imdb.images.name = {imNames.name};
@@ -63,34 +61,21 @@ for ii = 1 : numel(imdb.images.name)
     drawnow ;
   end
   [~, imName, ~] = fileparts(imdb.images.name{ii});
-  [~, id_other] = ismember(imdb.meta.classes, 'other');
-  id_other = find(id_other);
-  other = zeros(size(labels));
   for c = setdiff(unique(labels(:))', [0 find(~imdb.meta.inUse)])
     imdb.segments.id(end + 1) = 1 + numel(imdb.segments.id);
     imdb.segments.imageId(end + 1) = imdb.images.id(ii) ;
     imdb.segments.label(end + 1) = c ;
     crtSegName = sprintf('%s_%d.png', imName, c);
     imdb.segments.mask{end + 1} = crtSegName ;
-    other = other | (labels == c);
     imwrite(labels == c, fullfile(imdb.maskDir, crtSegName));
   end
-  imdb.segments.id(end + 1) = 1 + numel(imdb.segments.id);
-  imdb.segments.imageId(end + 1) = imdb.images.id(ii) ;
-  imdb.segments.label(end + 1) = id_other ;
-  crtSegName = sprintf('%s_%d.png', imName, id_other);
-  imdb.segments.mask{end + 1} = crtSegName ;
-  imwrite(~other, fullfile(imdb.maskDir, crtSegName));
   imwrite(labels, fullfile(imdb.maskDir, [imName '.png']));
 end
 
 % split images in train, val, test
 imdb.meta.sets = {'train', 'val', 'test'};
-imdb.images.set = ones(1, numel(imdb.images.name));
+imdb.images.set = zeros(1, numel(imdb.images.name));
 imdb.segments.set = ones(1, numel(imdb.segments.id));
-
-
-
 % for ii = 1 : numel(imdb.meta.sets)
 %   fid = fopen(fullfile(msrcDir, 'labels', [imdb.meta.sets{ii} '.txt']));
 %   if (fid > 0)
@@ -102,6 +87,7 @@ imdb.segments.set = ones(1, numel(imdb.segments.id));
 %     imdb.segments.set(lia) = ii;
 %   end
 % end
-% imdb.segments.set = ones(1, numel(imdb.segments.id)) * 3;
+imdb.segments.set = ones(1, numel(imdb.segments.id)) * 3;
+imdb.segments.set= imdb.images.id;
 
 imdb.segments.difficult = false(1, numel(imdb.segments.id)) ;

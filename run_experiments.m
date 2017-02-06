@@ -85,7 +85,7 @@ function run_experiments()
   % Set of experiments to run
   setupNameList = {'dcnn'};%,'dcnnvd','rcnn','dsift', 'rdcnn', 'srdcnn'}; %,'rcnnvd', 'rdcnnvd'} ;
   encoderList = {{dcnn}};%,{dcnnvd}, {rcnn}, {dsift}, {rcnn dcnn}, {rcnn dcnn dsift}};%, {rcnnvd}, {rcnnvd dcnnvd}} ;
-  datasetList = {{'coco', 1}};%, {'fmd',14}, {'dtd',10}, {'voc07',1}} ; % {'kth', 4}, , {'mit',1}, {'os',1}
+  datasetList = {{'msrc_voc', 1}}; %{'msrc_nobg', 1}, {'samplevoc07_nobg', 1}};%, {'fmd',14}, {'dtd',10}, {'voc07',1}} ; % {'kth', 4}, , {'mit',1}, {'os',1}
 
 
   for ii = 1 : numel(datasetList)
